@@ -1,0 +1,69 @@
+hash: c7a34bdf5924faab74861c1fb91a06e7d2b952a3ba5bea03a4156c1b123e1a48
+updated: 2017-12-22T13:10:54.304947368-08:00
+imports:
+- name: github.com/docker/distribution
+  version: f4118485915abb8b163442717326597908eee6aa
+  subpackages:
+  - digestset
+  - reference
+- name: github.com/docker/docker
+  version: 90d35abf7b3535c1c319c872900fbd76374e521c
+  subpackages:
+  - api
+  - api/types
+  - api/types/blkiodev
+  - api/types/container
+  - api/types/events
+  - api/types/filters
+  - api/types/image
+  - api/types/mount
+  - api/types/network
+  - api/types/registry
+  - api/types/strslice
+  - api/types/swarm
+  - api/types/time
+  - api/types/versions
+  - api/types/volume
+  - client
+  - pkg/ioutils
+  - pkg/longpath
+  - pkg/system
+  - pkg/tlsconfig
+- name: github.com/docker/go-connections
+  version: 3ede32e2033de7505e6500d6c868c2b9ed9f169d
+  subpackages:
+  - nat
+  - sockets
+  - tlsconfig
+- name: github.com/docker/go-units
+  version: d59758554a3d3911fa25c0269de1ebe2f1912c39
+- name: github.com/docker/libtrust
+  version: aabc10ec26b754e797f9028f4589c5b7bd90dc20
+- name: github.com/kelseyhightower/envconfig
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+- name: github.com/Microsoft/go-winio
+  version: 78439966b38d69bf38227fbf57ac8a6fee70f69a
+- name: github.com/opencontainers/go-digest
+  version: 279bed98673dd5bef374d3b6e4b09e2af76183bf
+- name: github.com/pkg/errors
+  version: e881fd58d78e04cf6d0de1217f8707c8cc2249bc
+- name: github.com/Sirupsen/logrus
+  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
+- name: github.com/sirupsen/logrus
+  version: d682213848ed68c0a260ca37d6dd5ace8423f5ba
+- name: golang.org/x/crypto
+  version: d585fd2cc9195196078f516b69daff6744ef5e84
+  subpackages:
+  - ssh/terminal
+- name: golang.org/x/net
+  version: d866cfc389cec985d6fda2859936a575a55a3ab6
+  subpackages:
+  - context
+  - context/ctxhttp
+  - proxy
+- name: golang.org/x/sys
+  version: 83801418e1b59fb1880e363299581ee543af32ca
+  subpackages:
+  - unix
+  - windows
+testImports: []
