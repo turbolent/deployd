@@ -11,17 +11,19 @@ import (
 	"os/exec"
 	"path"
 	"strconv"
-	"syscall"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/daemon/graphdriver/overlayutils"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/containerfs"
 	"github.com/docker/docker/pkg/fsutils"
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/locker"
 	"github.com/docker/docker/pkg/mount"
-	"github.com/opencontainers/runc/libcontainer/label"
+	"github.com/docker/docker/pkg/system"
+	"github.com/opencontainers/selinux/go-selinux/label"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 )
 
 // This is a small wrapper over the NaiveDiffWriter that lets us have a custom
@@ -268,10 +270,7 @@ func (d *Driver) Create(id, parent string, opts *graphdriver.CreateOpts) (retErr
 
 	// Toplevel images are just a "root" dir
 	if parent == "" {
-		if err := idtools.MkdirAs(path.Join(dir, "root"), 0755, rootUID, rootGID); err != nil {
-			return err
-		}
-		return nil
+		return idtools.MkdirAndChown(path.Join(dir, "root"), 0755, idtools.IDPair{rootUID, rootGID})
 	}
 
 	parentDir := d.dir(parent)
@@ -339,39 +338,36 @@ func (d *Driver) dir(id string) string {
 func (d *Driver) Remove(id string) error {
 	d.locker.Lock(id)
 	defer d.locker.Unlock(id)
-	if err := os.RemoveAll(d.dir(id)); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	return nil
+	return system.EnsureRemoveAll(d.dir(id))
 }
 
 // Get creates and mounts the required file system for the given id and returns the mount path.
-func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
+func (d *Driver) Get(id, mountLabel string) (_ containerfs.ContainerFS, err error) {
 	d.locker.Lock(id)
 	defer d.locker.Unlock(id)
 	dir := d.dir(id)
 	if _, err := os.Stat(dir); err != nil {
-		return "", err
+		return nil, err
 	}
 	// If id has a root, just return it
 	rootDir := path.Join(dir, "root")
 	if _, err := os.Stat(rootDir); err == nil {
-		return rootDir, nil
+		return containerfs.NewLocalContainerFS(rootDir), nil
 	}
 	mergedDir := path.Join(dir, "merged")
 	if count := d.ctr.Increment(mergedDir); count > 1 {
-		return mergedDir, nil
+		return containerfs.NewLocalContainerFS(mergedDir), nil
 	}
 	defer func() {
 		if err != nil {
 			if c := d.ctr.Decrement(mergedDir); c <= 0 {
-				syscall.Unmount(mergedDir, 0)
+				unix.Unmount(mergedDir, 0)
 			}
 		}
 	}()
 	lowerID, err := ioutil.ReadFile(path.Join(dir, "lower-id"))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	var (
 		lowerDir = path.Join(d.dir(string(lowerID)), "root")
@@ -379,19 +375,19 @@ func (d *Driver) Get(id string, mountLabel string) (s string, err error) {
 		workDir  = path.Join(dir, "work")
 		opts     = fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", lowerDir, upperDir, workDir)
 	)
-	if err := syscall.Mount("overlay", mergedDir, "overlay", 0, label.FormatMountLabel(opts, mountLabel)); err != nil {
-		return "", fmt.Errorf("error creating overlay mount to %s: %v", mergedDir, err)
+	if err := unix.Mount("overlay", mergedDir, "overlay", 0, label.FormatMountLabel(opts, mountLabel)); err != nil {
+		return nil, fmt.Errorf("error creating overlay mount to %s: %v", mergedDir, err)
 	}
 	// chown "workdir/work" to the remapped root UID/GID. Overlay fs inside a
 	// user namespace requires this to move a directory from lower to upper.
 	rootUID, rootGID, err := idtools.GetRootUIDGID(d.uidMaps, d.gidMaps)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if err := os.Chown(path.Join(workDir, "work"), rootUID, rootGID); err != nil {
-		return "", err
+		return nil, err
 	}
-	return mergedDir, nil
+	return containerfs.NewLocalContainerFS(mergedDir), nil
 }
 
 // Put unmounts the mount path created for the give id.
@@ -406,7 +402,7 @@ func (d *Driver) Put(id string) error {
 	if count := d.ctr.Decrement(mountpoint); count > 0 {
 		return nil
 	}
-	if err := syscall.Unmount(mountpoint, 0); err != nil {
+	if err := unix.Unmount(mountpoint, unix.MNT_DETACH); err != nil {
 		logrus.Debugf("Failed to unmount %s overlay: %v", id, err)
 	}
 	return nil

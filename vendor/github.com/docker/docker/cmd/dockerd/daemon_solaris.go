@@ -5,33 +5,20 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 	"path/filepath"
-	"syscall"
 
 	"github.com/docker/docker/libcontainerd"
-	"github.com/docker/docker/pkg/system"
+	"golang.org/x/sys/unix"
 )
 
 const defaultDaemonConfigFile = ""
-
-// currentUserIsOwner checks whether the current user is the owner of the given
-// file.
-func currentUserIsOwner(f string) bool {
-	if fileInfo, err := system.Stat(f); err == nil && fileInfo != nil {
-		if int(fileInfo.UID()) == os.Getuid() {
-			return true
-		}
-	}
-	return false
-}
 
 // setDefaultUmask sets the umask to 0022 to avoid problems
 // caused by custom umask
 func setDefaultUmask() error {
 	desiredUmask := 0022
-	syscall.Umask(desiredUmask)
-	if umask := syscall.Umask(desiredUmask); umask != desiredUmask {
+	unix.Umask(desiredUmask)
+	if umask := unix.Umask(desiredUmask); umask != desiredUmask {
 		return fmt.Errorf("failed to set umask: expected %#o, got %#o", desiredUmask, umask)
 	}
 
@@ -54,20 +41,8 @@ func preNotifySystem() {
 func notifySystem() {
 }
 
-func (cli *DaemonCli) getPlatformRemoteOptions() []libcontainerd.RemoteOption {
-	opts := []libcontainerd.RemoteOption{}
-	if cli.Config.ContainerdAddr != "" {
-		opts = append(opts, libcontainerd.WithRemoteAddr(cli.Config.ContainerdAddr))
-	} else {
-		opts = append(opts, libcontainerd.WithStartDaemon(true))
-	}
-	return opts
-}
-
-// getLibcontainerdRoot gets the root directory for libcontainerd/containerd to
-// store their state.
-func (cli *DaemonCli) getLibcontainerdRoot() string {
-	return filepath.Join(cli.Config.ExecRoot, "libcontainerd")
+func (cli *DaemonCli) getPlatformRemoteOptions() ([]libcontainerd.RemoteOption, error) {
+	return nil, nil
 }
 
 // getSwarmRunRoot gets the root directory for swarm to store runtime state
