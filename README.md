@@ -1,3 +1,3 @@
 # deployd
 
-Update Docker Swarm services using webhooks
+Update Kubernetes deployments and Docker Swarm services using webhooks

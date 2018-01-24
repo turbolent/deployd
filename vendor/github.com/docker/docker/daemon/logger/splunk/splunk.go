@@ -15,13 +15,14 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/daemon/logger"
 	"github.com/docker/docker/daemon/logger/loggerutils"
 	"github.com/docker/docker/pkg/urlutil"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -203,7 +204,7 @@ func New(info logger.Info) (logger.Logger, error) {
 		}
 		gzipCompressionLevel = int(gzipCompressionLevel64)
 		if gzipCompressionLevel < gzip.DefaultCompression || gzipCompressionLevel > gzip.BestCompression {
-			err := fmt.Errorf("Not supported level '%s' for %s (supported values between %d and %d).",
+			err := fmt.Errorf("not supported level '%s' for %s (supported values between %d and %d)",
 				gzipCompressionLevelStr, splunkGzipCompressionLevelKey, gzip.DefaultCompression, gzip.BestCompression)
 			return nil, err
 		}
@@ -363,6 +364,11 @@ func (l *splunkLoggerJSON) Log(msg *logger.Message) error {
 }
 
 func (l *splunkLoggerRaw) Log(msg *logger.Message) error {
+	// empty or whitespace-only messages are not accepted by HEC
+	if strings.TrimSpace(string(msg.Line)) == "" {
+		return nil
+	}
+
 	message := l.createSplunkMessage(msg)
 
 	message.Event = string(append(l.prefix, msg.Line...))
