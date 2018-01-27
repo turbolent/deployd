@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployd
+  labels:
+    app: deployd
+spec:
+  selector:
+    matchLabels:
+      app: deployd
+  template:
+    metadata:
+      labels:
+        app: deployd
+    spec:
+      serviceAccountName: deployd
+      containers:
+      - name: deployd
+        image: turbolent/deployd:latest
+        ports:
+        - containerPort: 7070
+        env:
+        - name: DEPLOYD_MODE
+          value: kubernetes
+        - name: DEPLOYD_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: deployd-secret
+              key: token
