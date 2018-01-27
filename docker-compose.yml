@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  deloyd:
+   image: turbolent/deployd:latest
+   environment:
+     DEPLOYD_MODE: docker
+     DEPLOYD_TOKEN: "SECRET"
+   volumes:
+     - type: bind
+       source: "/var/run/docker.sock"
+       target: "/var/run/docker.sock"
+   deploy:
+     placement:
+       constraints: [node.role == manager]
+   ports:
+    - "7070:7070"

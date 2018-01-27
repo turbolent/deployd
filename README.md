@@ -15,3 +15,8 @@ Update Kubernetes deployments and Docker Swarm services using webhooks
 - Create the service:
   `kubectl apply -f service.yaml`
 - Create an ingress
+
+## Docker Swarm
+
+- See `docker-compose.yml`
+- Make sure to set environment variable `DEPLOYD_TOKEN` to a new secret
